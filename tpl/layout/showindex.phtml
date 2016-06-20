@@ -1,0 +1,44 @@
+<section class="rt_wrap content mCustomScrollbar">
+	<div class="rt_content">
+<section>
+	<h2><strong style="color:grey;"></strong></h2>
+	<div class="page_title">
+		<h2 class="fl">红包系统用户列表</h2>
+	</div>
+	<table class="table">
+		<tr>
+			<th>用户名ID(UID)</th>
+			<th>用户名</th>
+			<th>类型</th>
+			<th>创建时间</th>
+			<th>最后登入时间</th>
+			<th>有效期</th>
+			<th>公众号类型</th>
+			<th>状态</th>
+			<th>操作</th>
+		</tr>
+
+		{% for item in list['data'] %}
+			<tr>
+				<td>{{item['id']}}</td>
+				<td>{{item['username']}}</td>
+				<td>{{item['type']}}</td>
+				<td>{{item['time']}}</td>
+				<td>{{item['last_time']}}</td>
+				<td>{{item['stime']}} - {{item['etime']}}</td>
+				<td>{{item['gzh']}}</td>
+				<td>{{item['status']}}</td>
+				<td>
+					<a href="#" class="inner_btn">禁用</a>
+					<a href="/admin/shenhe?uid={{item['id']}}" class="inner_btn">活动审核(代发)</a>
+				</td>
+			</tr>
+		{% endfor %}
+	</table>
+	<aside class="paging">
+		<a href="?page={{list['current'] -1}}">上一页</a>
+		<a href="?page={{list['next']}}">下一页</a>
+	</aside>
+</section>
+		</section>
+</div>

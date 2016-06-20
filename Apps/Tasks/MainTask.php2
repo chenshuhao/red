@@ -1,0 +1,200 @@
+<?php
+
+class MainTask extends \Phalcon\CLI\Task
+{
+	public $voteInfo;
+	public $wechat;
+
+	public function mainAction()
+	{
+		$queue = new Phalcon\Queue\Beanstalk(
+			array(
+				'host' => '127.0.0.1',
+				'port' => '11300'
+			)
+		);
+
+		$queue->watch('red');
+
+		while (($job = $queue->reserve())) {
+
+			$message = $job->getBody();
+			$job->delete();
+
+
+			if($message){
+				$this->voteInfo = \Vote::findFirst(array(
+					'conditions' => 'id=:id: ',
+					'bind'       => array(
+						'id'    => $message['vid']
+					)
+				));
+
+				if($this->voteInfo){
+
+					$this->config = \Config::findFirst(array(
+						'conditions' => 'uid=:uid:',
+						'bind'       => array(
+							'uid'    => $this->voteInfo->uid
+						)
+					));
+					if(!$this->config){
+						error('配置加载失败');
+						continue;
+					}
+
+					$this->wechat = new \library\WeChat\WeChat();
+					$this->wechat->init($this->config->appid, $this->config->secret, $this->config->mch_id, $this->config->pay_key);
+
+
+
+
+					if($message['run'] == 'T'){
+						$this->sendTu($message);
+					}
+
+					if($message['run'] == 'R'){
+						$km = $this->lotlng($message['openid']);
+						if(!$km){
+							continue;
+						}
+						sleep(5);
+
+						if(($this->voteInfo->fanwei != 0) && ($km > $this->voteInfo->fanwei)){
+							$this->wechat->sendKfZ($message['openid'],'对不起,您的位置不在商家发放红包范围内!您距离商家'.number_format($km,2).'千米,商家红包投放范围'.$this->voteInfo->fanwei.'千米!<a href=\''.'http://apis.map.qq.com/uri/v1/marker?marker='.urlencode('coord:'.$this->voteInfo->lt.';title:商家的位置;addr:商家的位置').'&referer=myapp'.'\'>查看商家地理位置</a>');
+							continue;
+						}else{
+							$userlingquSUM = \Vlog::sum (
+								array(
+									"column"     => "price",
+									'conditions' => 'vid=:vid:',
+									'bind'       => array(
+										'vid' => $this->voteInfo->id
+									)
+								)
+							);
+
+							if($userlingquSUM >= $this->voteInfo->money){
+//								$this->voteInfo->status = 0;
+//								$this->voteInfo->save();
+								$this->wechat->sendKfZ($message['openid'],'活动已经结束,期待我们的下次活动!');
+								continue;
+							}
+						}
+
+						$this->sendRed($message);
+					}
+				}else{
+					$this->wechat->sendKfZ($message['openid'],'活动异常,请联系管理员！');
+				}
+
+			}
+
+		}
+	}
+
+	public function sendTu($mes){
+
+		$userinfo = \Users::findFirst(array(
+			'conditions' => 'openid=:openid:',
+			'bind'       => array(
+				'openid'    => $mes['openid']
+			)
+		));
+
+		if($userinfo){
+			if(!$userinfo->ticket){
+				$ticket = $this->wechat->getQRTicket($mes['openid']);
+				$userinfo->ticket = $ticket['ticket'];
+				$userinfo->save();
+			}
+
+
+			$imageData = file_get_contents('https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket='.$userinfo->ticket);
+			if($imageData){
+				$qcodePath = APP_ROOT.DIRECTORY_SEPARATOR.'tmp'.DIRECTORY_SEPARATOR.uniqid().'.jpg';
+				file_put_contents($qcodePath,$imageData);
+			}
+
+			$bgImage = APP_ROOT.'public'.DIRECTORY_SEPARATOR.$this->voteInfo->tup;
+			$output = APP_ROOT.'public'.DIRECTORY_SEPARATOR.'images'.DIRECTORY_SEPARATOR.$mes['openid'].'.jpg';
+
+//			$exec = 'convert "'.$bgImage.'" -compose modulate -define compose:args=120x255 "'.$qcodePath.'" -geometry 250x250+198+385 -composite "'.$output.'"';
+			$exec = 'convert "'.$bgImage.'" -compose over "'.$qcodePath.'" -geometry 250x250+198+385 -composite "'.$output.'"';
+			exec($exec);
+			$res = $this->wechat->yongjiusucai($output);
+
+			$this->wechat->sendKfZT($mes['openid'],$res['media_id']);
+			sleep(3);
+			$this->wechat->sendKfZ($mes['openid'],'领完之后,不要忘记分享给你的朋友来领哦!');
+
+		}
+	}
+
+	public function sendRed($mes){
+		$price = mt_rand($this->voteInfo->smoeny,$this->voteInfo->emoney);
+		$cert_file = APP_ROOT.'public'.DIRECTORY_SEPARATOR.$this->config->cert_file;
+		$key_file = APP_ROOT.'public'.DIRECTORY_SEPARATOR.$this->config->key_file;
+
+		$userData = array(
+			'openid'=>$mes['openid'],
+			'vid'=>$this->voteInfo->id,
+			'price'=>$price,
+			'type'=>$mes['run'],
+			'status'=>0,
+			'msg'=>'发放中...',
+			'time'=>time(),
+		);
+		$userModel = new \Vlog();
+		if(!$userModel->create($userData)){
+			error('红包发放记录初始化保存失败');
+		}
+
+		$res = $this->wechat->sendMoneyRed($price,$cert_file,$key_file,$this->voteInfo->qname,$mes['openid'],$this->voteInfo->wsing,$this->voteInfo->name);
+
+
+		$userModel->msg= $res['msg'];
+		$userModel->status= $res['status'];
+
+		if(!$userModel->save()){
+			error('发放记录收尾失败');
+		}
+
+	}
+
+	public function lotlng($openid){
+		$userinfo = \Users::findFirst(array(
+			'conditions' => 'openid=:openid:',
+			'bind'       => array(
+				'openid'    => $openid
+			)
+		));
+
+		if($userinfo){
+			if(!$userinfo->lat || !$userinfo->lng){
+				$this->wechat->sendKfZ($openid,'对不起,我们没有获取到您的位置,无法为您发放红包,请开启位置后回复['.$this->voteInfo->key.']再试一次!');
+				return;
+			}
+
+			$lotlnt = explode(',',$this->voteInfo->lt);
+			return $this->distance($lotlnt['0'],$lotlnt['1'],$userinfo->lat,$userinfo->lng);
+		}
+	}
+
+	function distance($lat1, $lng1, $lat2, $lng2, $miles = false)
+	{
+		$pi80 = M_PI / 180;
+		$lat1 *= $pi80;
+		$lng1 *= $pi80;
+		$lat2 *= $pi80;
+		$lng2 *= $pi80;
+		$r = 6372.797; // mean radius of Earth in km
+		$dlat = $lat2 - $lat1;
+		$dlng = $lng2 - $lng1;
+		$a = sin($dlat/2)*sin($dlat/2)+cos($lat1)*cos($lat2)*sin($dlng/2)*sin($dlng/2);
+		$c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+		$km = $r * $c;
+		return ($miles ? ($km * 0.621371192) : $km);
+	}
+}
+

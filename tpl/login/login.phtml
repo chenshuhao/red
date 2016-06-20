@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>后台登录</title>
+    <meta name="author" content="DeathGhost"/>
+    <link rel="stylesheet" type="text/css" href="/css/style.css"/>
+    <style>
+        body {
+            height: 100%;
+            background: #16a085;
+            overflow: hidden;
+        }
+
+        canvas {
+            z-index: -1;
+            position: absolute;
+        }
+    </style>
+    <script src="/js/jquery.js"></script>
+    <script>
+        $(document).ready(function () {
+            //粒子背景特效
+            $('body').particleground({
+                dotColor: '#5cbdaa',
+                lineColor: '#5cbdaa'
+            });
+        });
+    </script>
+</head>
+<body>
+<form method="post">
+    <dl class="admin_login">
+        <dt>
+            <strong>管理</strong>
+            <em>Management System</em>
+        </dt>
+        <dd class="user_icon">
+            <input type="text" name="username" placeholder="账号" class="login_txtbx"/>
+        </dd>
+        <dd class="pwd_icon">
+            <input type="password" name='password' placeholder="密码" class="login_txtbx"/>
+        </dd>
+        <dd>
+            <button class="submit_btn">登入</button>
+        </dd>
+        <dd>
+            <p>扬州微天下 版权所有</p>
+        </dd>
+    </dl>
+</form>
+</body>
+</html>

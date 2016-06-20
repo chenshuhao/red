@@ -1,0 +1,39 @@
+<section class="rt_wrap content mCustomScrollbar">
+	<div class="rt_content">
+		<script src='/laydate/laydate.js' ></script>
+
+		<section>
+			<form action="" method="post">
+				<h2><strong style="color:grey;">创建用户</strong></h2>
+				<ul class="ulColumn2">
+					<li>
+						<span class="item_name" style="width:120px;">用户名：</span>
+						<input type="text" class="textbox textbox_295" name="username" placeholder="用户名"/>
+					</li>
+					<li>
+						<span class="item_name" style="width:120px;">密码：</span>
+						<input type="text" class="textbox textbox_295" name="password" placeholder="密码"/>
+					</li>
+					<li>
+						<span class="item_name" style="width:120px;">有效期开始：</span>
+						<input type="text" class="textbox textbox_295" placeholder="请选择开始时间" name='stime'  class="laydate-icon"  onclick="laydate({istime: true, format: 'YYYY-MM-DD hh:mm:ss'})"/>
+					</li>
+					<li>
+						<span class="item_name" style="width:120px;">有效期结束：</span>
+						<input type="text" class="textbox textbox_295" placeholder="请选择开始时间" name='etime'  class="laydate-icon" onclick="laydate({istime: true, format: 'YYYY-MM-DD hh:mm:ss'})"/>
+					</li>
+					<li>
+						<span class="item_name" style="width:120px;">用户类型：</span>
+						<label class="single_selection"><input type="radio" checked name="type" value="U"/>普通用户</label>
+						<label class="single_selection"><input type="radio" name="type" value="A"/>平台管理员</label>
+					</li>
+					<li>
+						<span class="item_name" style="width:120px;"></span>
+						<input type="submit" class="link_btn"/>
+					</li>
+				</ul>
+
+			</form>
+		</section>
+	</div>
+</section>
